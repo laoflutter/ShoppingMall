@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shoppingmall/utility/my_constant.dart';
 import 'package:shoppingmall/utility/my_dialog.dart';
 import 'package:shoppingmall/widgets/show_image.dart';
+import 'package:shoppingmall/widgets/show_progress.dart';
 import 'package:shoppingmall/widgets/show_title.dart';
 
 class CreateAccount extends StatefulWidget {
@@ -18,6 +19,7 @@ class CreateAccount extends StatefulWidget {
 class _CreateAccountState extends State<CreateAccount> {
   String? typeUser;
   File? file;
+  double? lat, lng;
 
   @override
   void initState() {
@@ -37,20 +39,45 @@ class _CreateAccountState extends State<CreateAccount> {
       if (locationPermission == LocationPermission.denied) {
         locationPermission = await Geolocator.requestPermission();
         if (locationPermission == LocationPermission.deniedForever) {
-          MyDailog().alertLocationService(context);
+          MyDailog().alertLocationService(
+              context, 'ບໍ່ອະນຸຍາດແຊ Location', 'ກະລຸນາແຊ Location');
         } else {
           //Find LatLng
+          findLatLng();
         }
       } else {
         if (locationPermission == LocationPermission.deniedForever) {
-          MyDailog().alertLocationService(context);
+          MyDailog().alertLocationService(
+              context, 'ບໍ່ອະນຸຍາດແຊ Location', 'ກະລຸນາແຊ Location');
         } else {
           //Find LatLng
+          findLatLng();
         }
       }
     } else {
       print('Service Location Close');
-      MyDailog().alertLocationService(context);
+      MyDailog().alertLocationService(context, 'Location Service ປິດຢູ່ ?',
+          'ກະລຸນາເປີດ Location Service ດ້ວຍ');
+    }
+  }
+
+  Future<Null> findLatLng() async {
+    print('findLatLan ==>work');
+    Position? position = await findPostion();
+    setState(() {
+      lat = position!.latitude;
+      lng = position.longitude;
+      print('lat = $lat, lng = $lng');
+    });
+  }
+
+  Future<Position?> findPostion() async {
+    Position position;
+    try {
+      position = await Geolocator.getCurrentPosition();
+      return position;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -236,11 +263,19 @@ class _CreateAccountState extends State<CreateAccount> {
             buildTitle('ຮູບ'),
             buildSubTitle(),
             buildAvatar(size),
+            buildTitle('ສະແດງພິກັດທີ່ທ່ານຢູ່'),
+            buildMap(),
           ],
         ),
       ),
     );
   }
+
+  Widget buildMap() => Container(
+        width: double.infinity,
+        height: 200,
+        child: lat == null ? ShowProgress() : Text('Lat = $lat, Lng = $lng'),
+      );
 
   Future<Null> chooseImage(ImageSource source) async {
     try {
