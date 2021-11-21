@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shoppingmall/utility/my_constant.dart';
 import 'package:shoppingmall/utility/my_dialog.dart';
@@ -20,6 +21,7 @@ class _CreateAccountState extends State<CreateAccount> {
   String? typeUser;
   File? file;
   double? lat, lng;
+  final FormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -89,6 +91,11 @@ class _CreateAccountState extends State<CreateAccount> {
           margin: EdgeInsets.only(top: 16),
           width: size * 0.6,
           child: TextFormField(
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'ກະລຸນາປ້ອນ Name ນຳ';
+              } else {}
+            },
             decoration: InputDecoration(
               labelStyle: MyConstant().h3Style(),
               labelText: 'Name :',
@@ -119,6 +126,12 @@ class _CreateAccountState extends State<CreateAccount> {
           margin: EdgeInsets.only(top: 16),
           width: size * 0.6,
           child: TextFormField(
+            keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'ກະລຸນາປ້ອນ Phone ນຳ';
+              } else {}
+            },
             decoration: InputDecoration(
               labelStyle: MyConstant().h3Style(),
               labelText: 'Phone :',
@@ -149,6 +162,11 @@ class _CreateAccountState extends State<CreateAccount> {
           margin: EdgeInsets.only(top: 16),
           width: size * 0.6,
           child: TextFormField(
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'ກະລຸນາປ້ອນ User ນຳ';
+              } else {}
+            },
             decoration: InputDecoration(
               labelStyle: MyConstant().h3Style(),
               labelText: 'User :',
@@ -179,6 +197,11 @@ class _CreateAccountState extends State<CreateAccount> {
           margin: EdgeInsets.only(top: 16),
           width: size * 0.6,
           child: TextFormField(
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'ກະລຸນາປ້ອນ Password ນຳ';
+              } else {}
+            },
             decoration: InputDecoration(
               labelStyle: MyConstant().h3Style(),
               labelText: 'Password :',
@@ -209,6 +232,11 @@ class _CreateAccountState extends State<CreateAccount> {
           margin: EdgeInsets.only(top: 16),
           width: size * 0.6,
           child: TextFormField(
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'ກະລຸນາປ້ອນ Address ນຳ';
+              } else {}
+            },
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'Address',
@@ -240,41 +268,83 @@ class _CreateAccountState extends State<CreateAccount> {
     double size = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          buildCreateNewAccount(),
+        ],
         title: Text('Create New Account'),
         backgroundColor: MyConstant.primary,
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
         behavior: HitTestBehavior.opaque,
-        child: ListView(
-          padding: EdgeInsets.all(16),
-          children: [
-            buildTitle('ຂໍ້ມູນທົ່ວໄປ :'),
-            buildName(size),
-            buildTitle('ຊະນິດຂອງ  User :'),
-            buildRadioBuyer(size),
-            buildRadioSeller(size),
-            buildRadioRider(size),
-            buildTitle('ຂໍ້ມູນພື້ນຖານ :'),
-            buildAddress(size),
-            buildPhone(size),
-            buildUser(size),
-            buildPassword(size),
-            buildTitle('ຮູບ'),
-            buildSubTitle(),
-            buildAvatar(size),
-            buildTitle('ສະແດງພິກັດທີ່ທ່ານຢູ່'),
-            buildMap(),
-          ],
+        child: Form(
+          key: FormKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                buildTitle('ຂໍ້ມູນທົ່ວໄປ :'),
+                buildName(size),
+                buildTitle('ຊະນິດຂອງ  User :'),
+                buildRadioBuyer(size),
+                buildRadioSeller(size),
+                buildRadioRider(size),
+                buildTitle('ຂໍ້ມູນພື້ນຖານ :'),
+                buildAddress(size),
+                buildPhone(size),
+                buildUser(size),
+                buildPassword(size),
+                buildTitle('ຮູບ'),
+                buildSubTitle(),
+                buildAvatar(size),
+                buildTitle('ສະແດງພິກັດທີ່ທ່ານຢູ່'),
+                buildMap(),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
+  IconButton buildCreateNewAccount() {
+    return IconButton(
+      onPressed: () {
+        if (FormKey.currentState!.validate()) {
+          if (typeUser == null) {
+            print('Non Choose Type User');
+            MyDailog().normalDialog(context, 'ຍັງບໍ່ໄດ້ເລືອກຊະນິດຂອງ User',
+                'ກະລຸນາ Tap ທີ່ຊະນິດຂອງ User ທີ່ຕ້ອງການ');
+          } else {
+            print('Process Insert to Database');
+          }
+        }
+      },
+      icon: Icon(Icons.cloud_upload),
+    );
+  }
+
+  Set<Marker> setMarker() => <Marker>[
+        Marker(
+          markerId: MarkerId('id'),
+          position: LatLng(lat!, lng!),
+          infoWindow: InfoWindow(
+              title: 'ທ່ານຢູ່ບ່ອນນີ້', snippet: 'Lat = $lat, Lng = $lng'),
+        ),
+      ].toSet();
+
   Widget buildMap() => Container(
         width: double.infinity,
-        height: 200,
-        child: lat == null ? ShowProgress() : Text('Lat = $lat, Lng = $lng'),
+        height: 300,
+        child: lat == null
+            ? ShowProgress()
+            : GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(lat!, lng!),
+                  zoom: 16,
+                ),
+                onMapCreated: (controller) => {},
+                markers: setMarker(),
+              ),
       );
 
   Future<Null> chooseImage(ImageSource source) async {
