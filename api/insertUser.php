@@ -39,7 +39,7 @@ if (isset($_GET)) {
 			echo "false";
 		}
 
-	} else echo "Welcome Master UNG";
+	} else echo "Welcome Jeun SPC";
    
 }
 	mysqli_close($link);

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -20,16 +21,15 @@ class CreateAccount extends StatefulWidget {
 
 class _CreateAccountState extends State<CreateAccount> {
   String? typeUser;
+  String avatar = '';
   File? file;
   double? lat, lng;
-  final FormKey = GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
   TextEditingController nameController = TextEditingController();
   TextEditingController addressController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController userController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-
-  String avatar = '';
 
   @override
   void initState() {
@@ -49,7 +49,7 @@ class _CreateAccountState extends State<CreateAccount> {
       if (locationPermission == LocationPermission.denied) {
         locationPermission = await Geolocator.requestPermission();
         if (locationPermission == LocationPermission.deniedForever) {
-          MyDailog().alertLocationService(
+          MyDialog().alertLocationService(
               context, 'ບໍ່ອະນຸຍາດແຊ Location', 'ກະລຸນາແຊ Location');
         } else {
           //Find LatLng
@@ -57,7 +57,7 @@ class _CreateAccountState extends State<CreateAccount> {
         }
       } else {
         if (locationPermission == LocationPermission.deniedForever) {
-          MyDailog().alertLocationService(
+          MyDialog().alertLocationService(
               context, 'ບໍ່ອະນຸຍາດແຊ Location', 'ກະລຸນາແຊ Location');
         } else {
           //Find LatLng
@@ -66,13 +66,13 @@ class _CreateAccountState extends State<CreateAccount> {
       }
     } else {
       print('Service Location Close');
-      MyDailog().alertLocationService(context, 'Location Service ປິດຢູ່ ?',
+      MyDialog().alertLocationService(context, 'Location Service ປິດຢູ່ ?',
           'ກະລຸນາເປີດ Location Service ດ້ວຍ');
     }
   }
 
   Future<Null> findLatLng() async {
-    print('findLatLan ==>work');
+    print('findLatLan ==> work');
     Position? position = await findPostion();
     setState(() {
       lat = position!.latitude;
@@ -103,7 +103,9 @@ class _CreateAccountState extends State<CreateAccount> {
             validator: (value) {
               if (value!.isEmpty) {
                 return 'ກະລຸນາປ້ອນ Name ນຳ';
-              } else {}
+              } else {
+                return null;
+              }
             },
             decoration: InputDecoration(
               labelStyle: MyConstant().h3Style(),
@@ -212,7 +214,9 @@ class _CreateAccountState extends State<CreateAccount> {
             validator: (value) {
               if (value!.isEmpty) {
                 return 'ກະລຸນາປ້ອນ Password ນຳ';
-              } else {}
+              } else {
+                return null;
+              }
             },
             decoration: InputDecoration(
               labelStyle: MyConstant().h3Style(),
@@ -291,7 +295,7 @@ class _CreateAccountState extends State<CreateAccount> {
         onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
         behavior: HitTestBehavior.opaque,
         child: Form(
-          key: FormKey,
+          key: formKey,
           child: SingleChildScrollView(
             child: Column(
               children: [
@@ -322,10 +326,10 @@ class _CreateAccountState extends State<CreateAccount> {
   IconButton buildCreateNewAccount() {
     return IconButton(
       onPressed: () {
-        if (FormKey.currentState!.validate()) {
+        if (formKey.currentState!.validate()) {
           if (typeUser == null) {
             print('Non Choose Type User');
-            MyDailog().normalDialog(context, 'ຍັງບໍ່ໄດ້ເລືອກຊະນິດຂອງ User',
+            MyDialog().normalDialog(context, 'ຍັງບໍ່ໄດ້ເລືອກຊະນິດຂອງ User',
                 'ກະລຸນາ Tap ທີ່ຊະນິດຂອງ User ທີ່ຕ້ອງການ');
           } else {
             print('Process Insert to Database');
@@ -346,8 +350,66 @@ class _CreateAccountState extends State<CreateAccount> {
     print(
         '## name = $name, address = $address, phone = $phone, user = $user, password = $password');
     String path =
-        '${MyConstant.domain}/shoppingmall/getUserWhereUser.php?isAdd=ture&user=$user';
-    await Dio().get(path).then((value) => print('## value ==>> $value'));
+        '${MyConstant.domain}/shoppingmall/getUserWhereUser.php?isAdd=true&user=$user';
+    await Dio().get(path).then((value) async {
+      print('## value ==>> $value');
+      if (value.toString() == 'null') {
+        print('## user OK');
+
+        if (file == null) {
+          // No Avatar
+          processsInsertMySQL(
+            name: name,
+            address: address,
+            phone: phone,
+            user: user,
+            password: password,
+          );
+        } else {
+          // Have Avatar
+          print('### process Upload Avatar');
+          String apiSaveAvatar =
+              '${MyConstant.domain}/shoppingmall/saveAvatar.php';
+          int i = Random().nextInt(100000);
+          String nameAvatar = 'avatar$i.jpg';
+          Map<String, dynamic> map = Map();
+          map['file'] =
+              await MultipartFile.fromFile(file!.path, filename: nameAvatar);
+          FormData data = FormData.fromMap(map);
+          await Dio().post(apiSaveAvatar, data: data).then((value) {
+            avatar = '/shoppingmall/avatar/$nameAvatar';
+            processsInsertMySQL(
+              name: name,
+              address: address,
+              phone: phone,
+              user: user,
+              password: password,
+            );
+          });
+        }
+      } else {
+        MyDialog().normalDialog(context, 'User False ?', 'Please Change User');
+      }
+    });
+  }
+
+  Future<Null> processsInsertMySQL(
+      {String? name,
+      String? address,
+      String? phone,
+      String? user,
+      String? password}) async {
+    print('### processInsertMySQL Work and avatar ==>> $avatar');
+    String apiInsertUser =
+        '${MyConstant.domain}/shoppingmall/insertUser.php?isAdd=true&name=$name&type=$typeUser&address=$address&phone=$phone&user=$user&password=$password&avatar=$avatar&lat=$lat&lng=$lng';
+    await Dio().get(apiInsertUser).then((value) {
+      if (value.toString() == 'true') {
+        Navigator.pop(context);
+      } else {
+        MyDialog().normalDialog(
+            context, 'Create New User False !!!', 'Please try Agian');
+      }
+    });
   }
 
   Set<Marker> setMarker() => <Marker>[
